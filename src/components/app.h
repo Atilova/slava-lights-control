@@ -1,8 +1,17 @@
 #pragma once
 
 #include <Arduino.h>
+#include <iostream>
 #include <Esp.h>
-#include <FS.h>
+
+#if defined(ESP32)
+    #include <SPIFFS.h>
+#elif defined(ESP8266)
+    #include <FS.h>
+#else
+  #error "This code is for ESP32 or ESP8266 only."
+#endif
+
 #include <EEPROM.h>
 
 #include <ESPAsyncWebServer.h>
@@ -14,6 +23,7 @@
 #include "components/trigger_sensors_manager.h"
 #include "components/utils.h"
 #include "components/validation.h"
+#include "components/webserver_supervisor.h"
 #include "components/wifi_connector.h"
 
 
@@ -60,7 +70,8 @@ bool serializeLightsData(AsyncWebServerRequest *request, LightsData &data)
 class App {
     private:
 		LightsData lightsData;  // Данные из eeprom
-		AsyncWebServer* webServer;
+		AsyncWebServer *webServer;
+        WebServerSupervisor *webServerSupervisor = nullptr;
 
         WifiConnector *wifiConnector = nullptr;
         EEPromManager<LightsData> *eepromManager = nullptr;
@@ -69,7 +80,7 @@ class App {
 
         MillisTimer readSensorsTimer = MillisTimer(500);  // Время опрса дверей
         MillisTimer offDelayTimer = MillisTimer(10000);  // Сколько горит свет
-        volatile bool isLightsActive = false;  // Вкл или выкл реле
+        bool isLightsActive = false;  // Вкл или выкл реле
 
     void main()
         {
@@ -99,8 +110,6 @@ class App {
 
 	void setupWebServer()
 		{
-			webServer = new AsyncWebServer(config->WEB_SERVER_PORT);
-
 			DefaultHeaders::Instance().addHeader("Access-Control-Allow-Origin", "*");
 
 			webServer->onNotFound([](AsyncWebServerRequest *request) {
@@ -189,7 +198,6 @@ class App {
             );
 
 			webServer->serveStatic("/static/", SPIFFS, "/static/");
-			webServer->begin();
 		}
 
     public:
@@ -202,13 +210,17 @@ class App {
             wifiConnector(&wifiConnector),
             eepromManager(&eepromManager),
             triggerSensorsManager(&triggerSensorsManager),
-            config(&config) {}
+            config(&config)
+        {
+            webServer = new AsyncWebServer(this->config->WEB_SERVER_PORT);
+            webServerSupervisor = new WebServerSupervisor(*webServer);
+        }
 
         ~App() {
-			webServer->end();
-			delete webServer;
+            webServerSupervisor->forceEnd();
 
-            tcpCleanup();
+            delete webServerSupervisor;
+			delete webServer;
 		}
 
         void setup()
@@ -220,15 +232,10 @@ class App {
                 eepromManager->setup();
                 triggerSensorsManager->setup();
 
-                if (!eepromManager->load(lightsData))
+                if (eepromManager->load(lightsData))
                     {
-                        Serial.println("Failed to load lightsData from EEProm");
-                    }
-                else
-                    {
-                        Serial.print("Successfully loaded lightsData from EEProm: ");
+                        std::cout << "Successfully loaded lightsData from EEProm" << std::endl;
                         offDelayTimer.setInterval(lightsData.offDelay * 1000);
-                        // displayLightsData(lightsData);  // Вывод в сериал
                     }
 
 				SPIFFS.begin();
@@ -238,6 +245,12 @@ class App {
         void run()
             {
                 wifiConnector->maintain();
+                webServerSupervisor->maintain();
                 main();
+            }
+
+        void onWifiStatusChange(bool isConnected)
+            {
+                webServerSupervisor->onNetworkConnectionChange(isConnected);
             }
 };

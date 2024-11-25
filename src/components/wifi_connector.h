@@ -1,18 +1,30 @@
 #pragma once
 
 #include <Arduino.h>
+#include <functional>
+#include <iostream>
 #include <IPAddress.h>
-#include <ESP8266WiFi.h>
+
+#if defined(ESP32)
+    #include <WiFi.h>
+#elif defined(ESP8266)
+    #include <ESP8266WiFi.h>
+#else
+  #error "This code is for ESP32 or ESP8266 only."
+#endif
 
 #include "millis_timer.h"
+
+#define CONNECTION_TIMEOUT 6000
+#define RESET_DELAY 1000
+
+typedef std::function<void(bool)> WifiCallback;
 
 
 struct WifiConfig {
     const IPAddress ESP_IP;
     const IPAddress GATEWAY;
     const IPAddress SUBNET_MASK;
-    const IPAddress PRIMARY_DNS;
-    const IPAddress SECONDARY_DNS;
     const char* SSID;
     const char* PASSWORD;
     const uint8_t INDICATION_PIN = LED_BUILTIN;  // Cветодиод esp8266
@@ -26,11 +38,19 @@ enum class WifiState {
 };
 
 
+const auto defaultWifiCallback = [](bool isConnected)
+    {
+        std::cout << "WiFi is " << (isConnected ? "connected" : "disconnected") << "!" << std::endl;
+    };
+
+
 class WifiConnector {
     WifiConfig *config = nullptr;
-    MillisTimer timer = MillisTimer(5000);
+    WifiCallback callback;
+    MillisTimer timer = MillisTimer(CONNECTION_TIMEOUT);
     WifiState state = WifiState::CONNECTING;
     uint8_t retries = 0;
+    bool isConnectionEstablished = false;
 
     void reset()
         {
@@ -40,7 +60,9 @@ class WifiConnector {
         }
 
     public:
-        WifiConnector(WifiConfig &config) : config(&config) {}
+        WifiConnector(WifiConfig &config, WifiCallback callback = defaultWifiCallback)
+            : config(&config),
+              callback(callback) {}
 
         ~WifiConnector() {}
 
@@ -56,31 +78,42 @@ class WifiConnector {
                     {
                         case WifiState::CONNECTED:
                             {
-                                if (!isConnected())
+                                if (!WiFi.isConnected())
                                     {
-                                        Serial.println("Initiate WiFi!");
+                                        state = WifiState::CONNECTING;
+                                        timer.setInterval(CONNECTION_TIMEOUT);
+                                        timer.flush();
+
+                                        std::cout << "WiFi initiate connection..." << std::endl;
                                         digitalWrite(config->INDICATION_PIN, HIGH);
 
-                                        state = WifiState::CONNECTING;
-                                        timer.setInterval(6000);
-                                        timer.flush();
+                                        if (isConnectionEstablished)
+                                            {
+                                                callback(false);
+                                                isConnectionEstablished = false;
+                                            }
                                     }
 
                                 break;
                             }
                         case WifiState::CONNECTING:
                             {
-                                if (isConnected())
+                                if (WiFi.isConnected())
                                     {
-                                        Serial.println("WiFi connected!");
-                                        digitalWrite(config->INDICATION_PIN, LOW);
-
                                         state = WifiState::CONNECTED;
                                         retries = 0;
+
+                                        std::cout << "WiFi is connected!" << std::endl;
+                                        digitalWrite(config->INDICATION_PIN, LOW);
+
+                                        if (!isConnectionEstablished)
+                                            {
+                                                callback(true);
+                                                isConnectionEstablished = true;
+                                            }
                                     }
                                 else if (timer.isReady())
                                     {
-                                        Serial.println("WiFi connecting...");
                                         retries += 1;
 
                                         WiFi.mode(WIFI_STA);
@@ -91,6 +124,8 @@ class WifiConnector {
                                         );
                                         WiFi.begin(config->SSID, config->PASSWORD);
 
+                                        std::cout << "WiFi connecting..." << std::endl;
+
                                         if (retries > 3)
                                             {
                                                 digitalWrite(config->INDICATION_PIN , HIGH);
@@ -98,7 +133,7 @@ class WifiConnector {
                                                 retries = 0;
                                                 state = WifiState::RESETTING;
                                                 reset();
-                                                timer.setInterval(1000);
+                                                timer.setInterval(RESET_DELAY);
                                             }
 
                                         timer.refresh();
@@ -111,7 +146,7 @@ class WifiConnector {
                                 if (timer.isReady())
                                     {
                                         state = WifiState::CONNECTING;
-                                        timer.setInterval(6000);
+                                        timer.setInterval(CONNECTION_TIMEOUT);
                                         timer.flush();
                                     }
 
@@ -122,6 +157,6 @@ class WifiConnector {
 
         bool isConnected()
             {
-                return WiFi.isConnected();
+                return isConnectionEstablished;
             }
 };

@@ -10,7 +10,7 @@ struct TriggerSensorsPinConfig {
     const uint8_t YARD_GATE;
     const uint8_t FRONT_DOOR;
 
-    const bool ACTIVE_LEVEL_DRIVEWAY_GATES = LOW;
+    const bool ACTIVE_LEVEL_DRIVEWAY_GATES = HIGH;
     const bool ACTIVE_LEVEL_YARD_GATE = HIGH;
     const bool ACTIVE_LEVEL_FRONT_DOOR = HIGH;
 };
