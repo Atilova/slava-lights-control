@@ -2,6 +2,8 @@
 
 #include <Arduino.h>
 
+#include "data.h"
+
 
 struct tcp_pcb;
 extern struct tcp_pcb* tcp_tw_pcbs;
@@ -23,4 +25,14 @@ void tcpCleanup(void)
 const char* toJsonBool(const bool value)
     {
         return value ? "true" : "false";
+    }
+
+
+void printLightsData(LightsData &data)
+    {
+        std::cout << "LightsData: "
+                  << "triggerOnDrivewayGates: " << data.triggerOnDrivewayGates
+                  << ", triggerOnYardGate: " << data.triggerOnYardGate
+                  << ", triggerOnFrontDoor: " << data.triggerOnFrontDoor
+                  << ", offDelay: "  << data.offDelay << std::endl;
     }

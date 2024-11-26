@@ -3,7 +3,6 @@
 #include <Arduino.h>
 #include <iostream>
 #include <Esp.h>
-
 #if defined(ESP32)
     #include <SPIFFS.h>
 #elif defined(ESP8266)
@@ -11,7 +10,6 @@
 #else
   #error "This code is for ESP32 or ESP8266 only."
 #endif
-
 #include <EEPROM.h>
 
 #include <ESPAsyncWebServer.h>

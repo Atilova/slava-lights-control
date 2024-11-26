@@ -3,7 +3,7 @@
 #include <Arduino.h>
 
 
-struct LightsData {
+struct __attribute__ ((packed)) LightsData {
     bool triggerOnDrivewayGates = false;
     bool triggerOnYardGate = false;
     bool triggerOnFrontDoor = false;

@@ -13,7 +13,7 @@ class EEPromManager {
     public:
         EEPromManager(uint16_t startAddress = 0) : _startAddress(startAddress)
             {
-                _dataSize = sizeof(T);  // Calculate the size of the struct T
+                _dataSize = sizeof(T) + sizeof(MAGIC_NUMBER);  // Calculate the size of the struct T+ MAGIC_NUM
             }
 
         ~EEPromManager()

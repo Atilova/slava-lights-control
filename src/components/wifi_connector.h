@@ -4,7 +4,6 @@
 #include <functional>
 #include <iostream>
 #include <IPAddress.h>
-
 #if defined(ESP32)
     #include <WiFi.h>
 #elif defined(ESP8266)
