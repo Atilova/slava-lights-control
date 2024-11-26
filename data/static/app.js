@@ -27,39 +27,13 @@ class AppModule {
     async run() {
         if (this.#running) return
 
-
         this.#ui.setOffDelayUnit(
             this.#config.offDelayUseMinutes ? "мин" : "сек"
         )
 
         this.#running = true
-        this.#ui.showLoader()
 
-        const preference = await this.#service.getPreference()
-        const status = await this.#service.getLightStatus()
-
-        await delay(200)
-
-        if (preference === null || status === null) {
-            this.#ui.showNotification(
-                'Не удалось загрузить настройки системы, попробуйте перезагрузить страницу!', {
-                    isSuccess: false,
-                    timeout: 2500
-                }
-            )
-            return this.#ui.hideLoader()
-        }
-
-        const { offDelay, ...rest } = preference
-        Object.assign(this.#preferenceState, {
-            offDelay: this.#config.offDelayUseMinutes ? offDelay / 60 : offDelay,
-            ...rest
-        })
-
-        this.#ui.setPreference(this.#preferenceState)
-        this.#ui.setLightStatus(status.enabled)
-        this.#ui.showNotification('Настройки успешно загружены!')
-        this.#ui.hideLoader()
+        await this.reloadPreference()
 
         this.#updateStatusIntervalId = setInterval(
             this.#updateLightStatus.bind(this),
@@ -104,6 +78,33 @@ class AppModule {
 
         Object.assign(this.#preferenceState, newPreference)
         this.#ui.showNotification('Настройки успешно сохранены!')
+        this.#ui.hideLoader()
+    }
+
+    async reloadPreference() {
+        this.#ui.pruneNotification()
+        this.#ui.showLoader()
+
+        const preference = await this.#service.getPreference()
+        const status = await this.#service.getLightStatus()
+
+        await delay(200);
+
+        if (preference === null || status === null) {
+            this.#ui.showNotification(
+                'Не удалось загрузить настройки системы, попробуйте перезагрузить страницу!', {
+                    isSuccess: false,
+                    timeout: 2500
+                }
+            )
+            return this.#ui.hideLoader()
+        }
+
+        Object.assign(this.#preferenceState, preference)
+
+        this.#ui.setPreference(this.#preferenceState)
+        this.#ui.setLightStatus(status.enabled)
+        this.#ui.showNotification('Настройки успешно загружены!')
         this.#ui.hideLoader()
     }
 
