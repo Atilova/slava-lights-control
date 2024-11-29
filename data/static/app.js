@@ -88,7 +88,7 @@ class AppModule {
         const preference = await this.#service.getPreference()
         const status = await this.#service.getLightStatus()
 
-        await delay(200);
+        await delay(200)
 
         if (preference === null || status === null) {
             this.#ui.showNotification(
@@ -100,7 +100,11 @@ class AppModule {
             return this.#ui.hideLoader()
         }
 
-        Object.assign(this.#preferenceState, preference)
+        const { offDelay, ...rest } = preference
+        Object.assign(this.#preferenceState, {
+            offDelay: this.#config.offDelayUseMinutes ? offDelay / 60 : offDelay,
+            ...rest
+        })
 
         this.#ui.setPreference(this.#preferenceState)
         this.#ui.setLightStatus(status.enabled)
@@ -117,9 +121,19 @@ class AppModule {
                     timeout: this.#config.updateLightStatusInterval
                 }
             )
+            this.#ui.clearOffDelayRemained()
             return this.#ui.setLightStatus(false)
         }
 
-        this.#ui.setLightStatus(status.enabled)
+        const { enabled, remained } = status
+        this.#ui.setLightStatus(enabled)
+        if (enabled) {
+            this.#ui.setOffDelayRemained(
+                Math.ceil(remained / 1000)
+            )
+        }
+        else {
+            this.#ui.clearOffDelayRemained()
+        }
     }
 }

@@ -1,4 +1,4 @@
-'use strict'
+'use strict';
 
 
 const API_URL = `${location.origin}/api`
@@ -13,7 +13,4 @@ const httpService = new HttpService({
 })
 
 
-const appModule = new AppModule(ui, httpService, {
-    offDelayUseMinutes: false,  // true минуты; false - секунды
-    updateLightStatusInterval: 2000
-})
+const appModule = new AppModule(ui, httpService, { ...appModuleConfig })

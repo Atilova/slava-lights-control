@@ -31,6 +31,7 @@ body {
     height: 30px;
     transition: fill 0.3s;
     fill: #333;
+    margin-left: 10px;
 }
 
 .status-text {
@@ -40,6 +41,11 @@ body {
 
 .status.active .status-icon {
     fill: #ffeb3b;
+}
+
+.timer-value {
+    font-size: 15px;
+    margin-top: 10px;
 }
 
 .form-section {

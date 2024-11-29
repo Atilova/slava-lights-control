@@ -8,7 +8,8 @@ class UI {
         yardGateCheckbox: document.getElementById('yardGate'),
         frontDoorCheckbox: document.getElementById('frontDoor'),
         statusSection: document.getElementById('statusSection'),
-        offDelayUnit: document.getElementById('offDelayUnit')
+        offDelayUnit: document.getElementById('offDelayUnit'),
+        offDelayRemained: document.getElementById('offDelayRemained')
     }
     #timeouts = {
         notificationPopupTimeoutId: null,
@@ -93,5 +94,13 @@ class UI {
 
     setOffDelayUnit(unit) {
         this.#elements.offDelayUnit.textContent = unit
+    }
+
+    setOffDelayRemained(seconds) {
+        this.#elements.offDelayRemained.innerText = `${seconds} cек`
+    }
+
+    clearOffDelayRemained() {
+        this.#elements.offDelayRemained.innerText = ''
     }
 }
