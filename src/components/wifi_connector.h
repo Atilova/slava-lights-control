@@ -12,6 +12,7 @@
   #error "This code is for ESP32 or ESP8266 only."
 #endif
 
+#include "utils.h"
 #include "millis_timer.h"
 
 #define CONNECTION_TIMEOUT 6000
@@ -26,7 +27,8 @@ struct WifiConfig {
     const IPAddress SUBNET_MASK;
     const char* SSID;
     const char* PASSWORD;
-    const uint8_t INDICATION_PIN = LED_BUILTIN;  // Cветодиод esp8266
+    const uint8_t INDICATION_PIN = LED_BUILTIN;
+    const bool INDICATION_LEVEL_ON = HIGH;
 };
 
 
@@ -69,6 +71,13 @@ class WifiConnector {
             {
                 pinMode(config->INDICATION_PIN, OUTPUT);
                 digitalWrite(config->INDICATION_PIN, HIGH);
+                repeat(5)
+                        {
+                            digitalWrite(config->INDICATION_PIN, config->INDICATION_LEVEL_ON);
+                            delay(300);
+                            digitalWrite(config->INDICATION_PIN, !config->INDICATION_LEVEL_ON);
+                            delay(500);
+                        }
             }
 
         void maintain()
@@ -84,7 +93,7 @@ class WifiConnector {
                                         timer.flush();
 
                                         std::cout << "WiFi initiate connection..." << std::endl;
-                                        digitalWrite(config->INDICATION_PIN, HIGH);
+                                        digitalWrite(config->INDICATION_PIN, !config->INDICATION_LEVEL_ON);
 
                                         if (isConnectionEstablished)
                                             {
@@ -103,7 +112,7 @@ class WifiConnector {
                                         retries = 0;
 
                                         std::cout << "WiFi is connected!" << std::endl;
-                                        digitalWrite(config->INDICATION_PIN, LOW);
+                                        digitalWrite(config->INDICATION_PIN, config->INDICATION_LEVEL_ON);
 
                                         if (!isConnectionEstablished)
                                             {
@@ -127,7 +136,7 @@ class WifiConnector {
 
                                         if (retries > 3)
                                             {
-                                                digitalWrite(config->INDICATION_PIN , HIGH);
+                                                digitalWrite(config->INDICATION_PIN , !config->INDICATION_LEVEL_ON);
 
                                                 retries = 0;
                                                 state = WifiState::RESETTING;

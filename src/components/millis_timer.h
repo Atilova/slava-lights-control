@@ -27,6 +27,21 @@ class MillisTimer {
                 startedAt = 0;
             }
 
+        uint32_t remains() const
+            {
+                const int remined =
+                    startedAt > 0
+                        ? interval - static_cast<uint32_t>(millis() - startedAt)
+                        : 0;
+
+                if (remined < 0)
+                    {
+                        return 0;
+                    }
+
+                return remined;
+            }
+
         bool isReady() const
             {
                 if (!startedAt)

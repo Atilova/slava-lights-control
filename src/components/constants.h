@@ -8,7 +8,8 @@ constexpr const char* apiGetEspFreeHeapJsonTemplate = R"({
 })";
 
 constexpr const char* apiGetLightStatusJsonTemplate = R"({
-    "enabled": %s
+    "enabled": %s,
+    "remained": %d
 })";
 
 constexpr const char* apiGetPreferenceJsonTemplate = R"({

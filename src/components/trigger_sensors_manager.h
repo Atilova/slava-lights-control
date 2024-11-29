@@ -36,12 +36,22 @@ class TriggerSensorsManager {
                 return mask && (digitalRead(pin) == activeLevel);
             }
 
-        bool isAnyActiveFromMask(LightsData& mask)
+        bool isAnyActiveFromMask(const LightsData &mask, const bool debug = false)
             {
                 const bool drivewayGates = readSensor(mask.triggerOnDrivewayGates, config->DRIVEWAY_GATES, config->ACTIVE_LEVEL_DRIVEWAY_GATES),
                            yardGate = readSensor(mask.triggerOnYardGate, config->YARD_GATE, config->ACTIVE_LEVEL_YARD_GATE),
-                           frontDoor = readSensor(mask.triggerOnFrontDoor, config->FRONT_DOOR, config->ACTIVE_LEVEL_FRONT_DOOR);
+                           frontDoor = readSensor(mask.triggerOnFrontDoor, config->FRONT_DOOR, config->ACTIVE_LEVEL_FRONT_DOOR),
+                           isAnyActive = drivewayGates || yardGate || frontDoor;
 
-                return drivewayGates || yardGate || frontDoor;
+                if (debug && isAnyActive)
+                    {
+                        std::cout << "Active sensors -> "
+                                  << "drivewayGates: " << drivewayGates
+                                  << " yardGate: " << yardGate
+                                  << " frontDoor: " << frontDoor
+                                  << std::endl;
+                    }
+
+                return isAnyActive;
             }
 };

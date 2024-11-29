@@ -32,6 +32,12 @@ struct AppConfig {
 };
 
 
+struct AppLogConfig {
+    const bool DEBUG_OFF_DELAY = false;
+    const bool DEBUG_TRIGGER_ACTIVE_SENSORS = false;
+};
+
+
 bool isAnyEnabledTriggers(LightsData &data)
     {
         return data.triggerOnDrivewayGates || data.triggerOnYardGate || data.triggerOnFrontDoor;
@@ -75,6 +81,7 @@ class App {
         EEPromManager<LightsData> *eepromManager = nullptr;
         TriggerSensorsManager *triggerSensorsManager = nullptr;
         AppConfig *config = nullptr;
+        AppLogConfig *logConfig = nullptr;
 
         MillisTimer readSensorsTimer = MillisTimer(500);  // Время опрса дверей
         MillisTimer offDelayTimer = MillisTimer(10000);  // Сколько горит свет
@@ -84,7 +91,10 @@ class App {
         {
             if (readSensorsTimer.isReady())
                 {
-                    const bool isAnyActiveSensor = triggerSensorsManager->isAnyActiveFromMask(lightsData);
+                    const bool isAnyActiveSensor = triggerSensorsManager->isAnyActiveFromMask(
+                        lightsData,
+                        logConfig->DEBUG_TRIGGER_ACTIVE_SENSORS
+                    );
                     if (isAnyActiveSensor)
                         {
                             if (!isLightsActive)
@@ -99,10 +109,21 @@ class App {
                     readSensorsTimer.refresh();
                 }
 
-            if (isLightsActive && offDelayTimer.isReady())
+            if (isLightsActive)
                 {
-                    digitalWrite(config->ESP_RELAY_PIN, !config->RELAY_LEVEL_ON);
-                    isLightsActive = false;
+                    if (offDelayTimer.isReady())
+                        {
+                            digitalWrite(config->ESP_RELAY_PIN, !config->RELAY_LEVEL_ON);
+                            isLightsActive = false;
+                        }
+
+                    if (logConfig->DEBUG_OFF_DELAY)
+                        {
+                            const uint32_t offDelayRemained = offDelayTimer.remains();
+                            std::cout << "Time left (sec) before timer off: "
+                                    << (offDelayRemained > 0 ? offDelayRemained / 1000 : 0)
+                                    << std::endl;
+                        }
                 }
         }
 
@@ -137,11 +158,12 @@ class App {
                 "/api/getLightStatus/",  // Горит не горит лампочка
                 HTTP_GET,
                 [this](AsyncWebServerRequest *request) {
-                    char jsonBuffer[50];
+                    char jsonBuffer[100];
                     sprintf(
                         jsonBuffer,
                         apiGetLightStatusJsonTemplate,
-                        toJsonBool(this->isLightsActive)
+                        toJsonBool(this->isLightsActive),
+                        this->offDelayTimer.remains()
                     );
 
                     request->send(200, "application/json", jsonBuffer);
@@ -203,12 +225,14 @@ class App {
             WifiConnector &wifiConnector,
             EEPromManager<LightsData> &eepromManager,
             TriggerSensorsManager &triggerSensorsManager,
-            AppConfig &config
+            AppConfig &config,
+            AppLogConfig &logConfig
         ) :
             wifiConnector(&wifiConnector),
             eepromManager(&eepromManager),
             triggerSensorsManager(&triggerSensorsManager),
-            config(&config)
+            config(&config),
+            logConfig(&logConfig)
         {
             webServer = new AsyncWebServer(this->config->WEB_SERVER_PORT);
             webServerSupervisor = new WebServerSupervisor(*webServer);
@@ -226,8 +250,8 @@ class App {
                 pinMode(config->ESP_RELAY_PIN, OUTPUT);
                 digitalWrite(config->ESP_RELAY_PIN, !config->RELAY_LEVEL_ON);
 
-                wifiConnector->setup();
                 eepromManager->setup();
+                wifiConnector->setup();
                 triggerSensorsManager->setup();
 
                 if (eepromManager->load(lightsData))

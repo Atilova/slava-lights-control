@@ -8,12 +8,12 @@
 #include "components/wifi_connector.h"
 #include "components/eeprom_manager.h"
 #include "components/trigger_sensors_manager.h"
+#include "components/uart_streambuf.h"
 
-
-// index.js - меняем минуты / секунды
-// маски уровней входов меняем в файле config.h
 
 void wifiCallbackAdapter(bool isConnected);
+
+UARTStreamBuf uartStreamBuf;
 
 WifiConnector wifiConnector(wifiConfig, wifiCallbackAdapter);
 EEPromManager<LightsData> eePromLightsManager;
@@ -23,7 +23,8 @@ App app(
     wifiConnector,
     eePromLightsManager,
     triggerSensorsManager,
-    appConfig
+    appConfig,
+    appLogConfig
 );
 
 
@@ -36,6 +37,9 @@ void wifiCallbackAdapter(bool isConnected)
 void setup()
     {
         Serial.begin(115200);
+        delay(100);
+
+        std::cout.rdbuf(&uartStreamBuf);
         std::cout << "Loaded, ready!" << std::endl;
 
         app.setup();

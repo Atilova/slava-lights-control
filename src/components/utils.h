@@ -4,6 +4,8 @@
 
 #include "data.h"
 
+#define repeat(n) for(int i = n; i--;)
+
 
 struct tcp_pcb;
 extern struct tcp_pcb* tcp_tw_pcbs;
